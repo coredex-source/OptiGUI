@@ -1,12 +1,10 @@
 package opekope2.optigui.internal
 
-import net.fabricmc.api.ClientModInitializer
-import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener
-import net.fabricmc.fabric.api.resource.ResourceManagerHelper
 import net.minecraft.resources.Identifier
 import net.minecraft.server.packs.resources.ResourceManager
 import net.minecraft.server.packs.resources.PreparableReloadListener
-import net.minecraft.server.packs.PackType
+import net.neoforged.bus.api.IEventBus
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent
 import opekope2.optigui.filter.ConjunctionFilter
 import opekope2.optigui.filter.IFilter
 import opekope2.optigui.filter.PostProcessorFilter
@@ -25,10 +23,10 @@ import org.slf4j.event.Level.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 
-internal object FilterLoader : IdentifiableResourceReloadListener, ClientModInitializer {
+internal object FilterLoader : PreparableReloadListener {
     private val LOGGER = LoggerFactory.getLogger("OptiGUI/FilterLoader")
 
-    override fun getFabricId(): Identifier = Identifier.fromNamespaceAndPath(MOD_ID, "filter_loader")
+    private val ID: Identifier = Identifier.fromNamespaceAndPath(MOD_ID, "filter_loader")
 
     override fun reload(
         store: PreparableReloadListener.SharedState,
@@ -41,8 +39,8 @@ internal object FilterLoader : IdentifiableResourceReloadListener, ClientModInit
             .thenAcceptAsync({ loadFilters(store.resourceManager(), it, LOGGER) }, applyExecutor)
     }
 
-    override fun onInitializeClient() {
-        ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(FilterLoader)
+    fun initialize(modEventBus: IEventBus) {
+        modEventBus.addListener(AddClientReloadListenersEvent::class.java) { it.addListener(ID, FilterLoader) }
     }
 
     private fun loadRawFilters(manager: ResourceManager, logger: Logger) =

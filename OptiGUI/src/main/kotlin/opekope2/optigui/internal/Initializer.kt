@@ -1,6 +1,5 @@
 package opekope2.optigui.internal
 
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper
 import net.minecraft.client.gui.screens.inventory.BookEditScreen
 import net.minecraft.client.gui.screens.inventory.BookViewScreen
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
@@ -8,6 +7,8 @@ import net.minecraft.client.gui.screens.inventory.HangingSignEditScreen
 import net.minecraft.client.KeyMapping
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.resources.Identifier
+import net.neoforged.bus.api.IEventBus
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent
 import opekope2.optigui.registry.FilterLoaderRegistry
 import opekope2.optigui.registry.RetexturableScreenRegistry
 import opekope2.optigui.resource.OptiFineFilterLoader
@@ -16,19 +17,17 @@ import opekope2.optigui.util.MOD_ID
 
 @JvmField
 internal val OPTIGUI_INSPECTOR_CATEGORY =
-    KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "inspector"))
+    KeyMapping.Category(Identifier.fromNamespaceAndPath(MOD_ID, "inspector"))
 
 @JvmField
-internal val INSPECTOR_KEY_BINDING: KeyMapping = KeyMappingHelper.registerKeyMapping(
-    KeyMapping(
-        "key.optigui.inspect",
-        InputConstants.Type.KEYBOARD,
-        InputConstants.KEY_F12,
-        OPTIGUI_INSPECTOR_CATEGORY
-    )
+internal val INSPECTOR_KEY_BINDING: KeyMapping = KeyMapping(
+    "key.optigui.inspect",
+    InputConstants.Type.KEYBOARD,
+    InputConstants.KEY_F12,
+    OPTIGUI_INSPECTOR_CATEGORY
 )
 
-internal fun initialize() {
+internal fun initialize(modEventBus: IEventBus) {
     RetexturableScreenRegistry.register(AbstractContainerScreen::class.java)
     RetexturableScreenRegistry.register(BookViewScreen::class.java)
     RetexturableScreenRegistry.register(BookEditScreen::class.java)
@@ -36,4 +35,11 @@ internal fun initialize() {
 
     FilterLoaderRegistry.register(OptiGuiFilterLoader())
     FilterLoaderRegistry.register(OptiFineFilterLoader())
+
+    modEventBus.addListener(RegisterKeyMappingsEvent::class.java, ::registerKeyMappings)
+}
+
+private fun registerKeyMappings(event: RegisterKeyMappingsEvent) {
+    event.registerCategory(OPTIGUI_INSPECTOR_CATEGORY)
+    event.register(INSPECTOR_KEY_BINDING)
 }

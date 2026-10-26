@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.dokka)
-    alias(libs.plugins.fabric.loom)
+    alias(libs.plugins.moddev)
 }
 
 base {
@@ -13,36 +13,44 @@ base {
 version = libs.versions.optigui.get()
 group = "opekope2.optigui"
 
-repositories {}
+repositories {
+    mavenCentral()
+    exclusiveContent {
+        forRepository { maven("https://thedarkcolour.github.io/KotlinForForge/") { name = "Kotlin for Forge" } }
+        filter { includeGroup("thedarkcolour") }
+    }
+}
+
+neoForge {
+    version = libs.versions.neoforge.get()
+
+    runs {
+        register("client") {
+            client()
+            gameDirectory = file("run")
+        }
+    }
+
+    mods {
+        register("optigui") {
+            sourceSet(sourceSets.main.get())
+        }
+    }
+}
 
 dependencies {
-    minecraft(libs.minecraft)
-    implementation(libs.fabric.loader)
-    implementation(libs.fabric.language.kotlin)
-
-    implementation(fabric.events.interaction.v0)
-    implementation(fabric.key.mapping.api.v1)
-    implementation(fabric.lifecycle.events.v1)
-    implementation(fabric.networking.api.v1)
-    implementation(fabric.deprecated.resource.loader.v0)
-    implementation(fabric.screen.api.v1)
+    implementation(libs.kotlinforforge)
 
     implementation(libs.apache.commons.text)
-    include(libs.apache.commons.text)
+    jarJar(libs.apache.commons.text)
     implementation(libs.ini4j)
-    include(libs.ini4j)
+    jarJar(libs.ini4j)
 
     testImplementation(kotlin("test"))
 
     if (project.hasProperty("javaSyntax")) {
         dokkaPlugin(libs.dokka.plugin.java.syntax)
     }
-}
-
-loom {
-    accessWidenerPath = file("src/main/resources/optigui.accesswidener")
-
-    runtimeOnlyLog4j = true
 }
 
 tasks {
@@ -67,14 +75,13 @@ tasks {
     }
 
     processResources {
-        filesMatching("fabric.mod.json") {
+        filesMatching("META-INF/neoforge.mods.toml") {
             expand(
                 mutableMapOf(
                     "version" to version as String,
-                    "fabric_loader" to libs.versions.fabric.loader.get(),
-                    "fabric_language_kotlin" to libs.versions.fabric.language.kotlin.get(),
                     "minecraft" to libs.versions.minecraft.get(),
-                    "java" to javaVersion
+                    "neoforge" to libs.versions.neoforge.get(),
+                    "kotlinforforge" to libs.versions.kotlinforforge.get()
                 )
             )
         }

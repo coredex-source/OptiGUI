@@ -1,8 +1,7 @@
 package opekope2.optigui.interaction
 
-import net.fabricmc.fabric.api.event.Event
-import net.fabricmc.fabric.api.event.EventFactory
 import net.minecraft.client.gui.screens.Screen
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Callback fired before an interaction begins.
@@ -16,17 +15,20 @@ fun interface IBeforeInteractionBeginCallback {
     fun onBeforeBegin(screen: Screen)
 
     companion object {
+        private val callbacks = CopyOnWriteArrayList<IBeforeInteractionBeginCallback>()
+
         /**
          * Event fired before an interaction begins.
          */
-        @JvmField
-        val EVENT: Event<IBeforeInteractionBeginCallback> =
-            EventFactory.createArrayBacked(IBeforeInteractionBeginCallback::class.java) { listeners ->
-                IBeforeInteractionBeginCallback { screen ->
-                    listeners.forEach { listener ->
-                        listener.onBeforeBegin(screen)
-                    }
-                }
+        @JvmStatic
+        fun register(callback: IBeforeInteractionBeginCallback) {
+            callbacks += callback
+        }
+
+        internal fun fire(screen: Screen) {
+            callbacks.forEach { callback ->
+                callback.onBeforeBegin(screen)
             }
+        }
     }
 }

@@ -2,44 +2,45 @@
 
 package opekope2.optigui.registry
 
-import net.fabricmc.api.ClientModInitializer
-import net.fabricmc.loader.api.FabricLoader
-import net.fabricmc.loader.api.metadata.ModMetadata
+import com.electronwill.nightconfig.core.UnmodifiableConfig
 import net.minecraft.resources.Identifier
+import net.neoforged.fml.ModList
+import net.neoforged.neoforgespi.language.IModInfo
 
 /**
  * Texture paths for Minecraft containers.
  *
- * To register your mod's containers' default GUI textures, create a
- * [custom field](https://fabricmc.net/wiki/documentation:fabric_mod_json#custom_fields) named
- * `optigui:container_default_textures`. It must be a JSON object. They keys are the container IDs, and the values are
- * the default GUI textures.
+ * To register your mod's containers' default GUI textures, add a mod property table named
+ * `optigui:container_default_gui_textures` to your `neoforge.mods.toml`. They keys are the container IDs, and the
+ * values are the default GUI textures:
  */
-object ContainerDefaultGuiTextureRegistry : ClientModInitializer {
+object ContainerDefaultGuiTextureRegistry {
     private const val CONTAINER_DEFAULT_TEXTURES_KEY = "optigui:container_default_gui_textures"
 
     private lateinit var containerTextures: MutableMap<Identifier, Identifier>
 
-    override fun onInitializeClient() {
+    internal fun initialize() {
         containerTextures = mutableMapOf()
-        for (mod in FabricLoader.getInstance().allMods) {
+        for (mod in ModList.get().mods) {
             try {
-                loadModTextures(mod.metadata)
+                loadModTextures(mod)
             } catch (e: Exception) {
-                throw RuntimeException("Failed to load container default GUI textures from mod `${mod.metadata.id}`", e)
+                throw RuntimeException("Failed to load container default GUI textures from mod `${mod.modId}`", e)
             }
         }
     }
 
-    private fun loadModTextures(metadata: ModMetadata) {
-        if (!metadata.containsCustomValue(CONTAINER_DEFAULT_TEXTURES_KEY)) return
-        val textures = metadata.getCustomValue(CONTAINER_DEFAULT_TEXTURES_KEY)
-        val texturesObj = textures.asObject
+    private fun loadModTextures(mod: IModInfo) {
+        val textures = when (val property = mod.modProperties[CONTAINER_DEFAULT_TEXTURES_KEY] ?: return) {
+            is UnmodifiableConfig -> property.entrySet().associate { it.key to it.getValue<Any?>() }
+            is Map<*, *> -> property
+            else -> throw RuntimeException("`$CONTAINER_DEFAULT_TEXTURES_KEY` must be a table")
+        }
 
-        for ((key, value) in texturesObj) {
-            val valueString = value.asString
+        for ((key, value) in textures) {
+            val valueString = value as String
 
-            val keyId = Identifier.parse(key)
+            val keyId = Identifier.parse(key as String)
             val valueId = Identifier.parse(valueString)
 
             if (keyId in containerTextures) {

@@ -1,5 +1,8 @@
 # OptiGUI
 
+> This branch is an unofficial NeoForge port of OptiGUI 2.3 for Minecraft 26.3. For Fabric, use the [official OptiGUI](https://github.com/opekope2/OptiGUI).
+> This will not be updated once OptiGUI 3 is released by opekope2 as OptiGUI 3 will have support for NeoForge.
+
 [![GitHub Release](https://img.shields.io/github/v/release/opekope2/OptiGUI?include_prereleases&style=flat&logo=github&label=Download%20form%20GitHub)](https://github.com/opekope2/OptiGUI/releases)
 [![Modrinth Download](https://img.shields.io/modrinth/v/optigui?style=flat&logo=modrinth&label=Download%20from%20Modrinth)](https://modrinth.com/mod/optigui/versions)
 [![CurseForge Download](https://img.shields.io/curseforge/v/619986?style=flat&logo=curseforge&label=Download%20from%20CurseForge)](https://www.curseforge.com/minecraft/mc-mods/optigui/files)
@@ -15,10 +18,10 @@ Other mods' developers can add their custom containers and customization options
 
 ## How to use it
 
-1. Download and install [Fabric loader](https://fabricmc.net/use) or [Quilt loader](https://quiltmc.org/en/install)
-2. Download this mod from your [favorite service](#optigui)
-3. Download the required dependencies as well
-4. Put this mod in your mods folder
+1. Download and install [NeoForge](https://neoforged.net)
+2. Download this mod
+3. Download [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge) as well
+4. Put both mods in your mods folder
 
 ## Supported languages
 

@@ -1,23 +1,16 @@
 package opekope2.optigui.internal.interaction
 
-import net.fabricmc.api.ClientModInitializer
-import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
-import net.fabricmc.fabric.api.event.player.UseBlockCallback
-import net.fabricmc.fabric.api.event.player.UseEntityCallback
-import net.fabricmc.fabric.api.event.player.UseItemCallback
-import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.gui.screens.inventory.*
 import net.minecraft.resources.Identifier
 import net.minecraft.world.InteractionHand
-import net.minecraft.world.InteractionResult
-import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.Items
 import net.minecraft.world.level.Level
-import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.EntityHitResult
+import net.neoforged.neoforge.client.event.ScreenEvent
+import net.neoforged.neoforge.common.NeoForge
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent
 import opekope2.optigui.interaction.IBeforeInteractionBeginCallback
 import opekope2.optigui.interaction.Interaction
 import opekope2.optigui.internal.TextureReplacer
@@ -26,58 +19,56 @@ import opekope2.optigui.util.identifier
 import opekope2.optigui.util.interactionData
 import opekope2.optigui.util.invalidateCachedReplacement
 
-internal object InteractionHandler : ClientModInitializer, UseBlockCallback, UseEntityCallback, UseItemCallback,
-    IBeforeInteractionBeginCallback, ScreenEvents.BeforeInit, ScreenEvents.BeforeExtract, ScreenEvents.AfterExtract {
-    override fun onInitializeClient() {
-        UseBlockCallback.EVENT.register(this)
-        UseEntityCallback.EVENT.register(this)
-        UseItemCallback.EVENT.register(this)
-        IBeforeInteractionBeginCallback.EVENT.register(this)
-        ScreenEvents.BEFORE_INIT.register(this)
+internal object InteractionHandler : IBeforeInteractionBeginCallback {
+    fun initialize() {
+        NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock::class.java, ::interactWithBlock)
+        NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.EntityInteract::class.java, ::interactWithEntity)
+        NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickItem::class.java, ::interactWithItem)
+        IBeforeInteractionBeginCallback.register(this)
+        NeoForge.EVENT_BUS.addListener(ScreenEvent.Render.Pre::class.java, ::beforeExtract)
+        NeoForge.EVENT_BUS.addListener(ScreenEvent.Render.Post::class.java, ::afterExtract)
     }
 
-    override fun interact(player: Player, world: Level, hand: InteractionHand, hitResult: BlockHitResult): InteractionResult {
-        if (!world.isClientSide) return InteractionResult.PASS
+    private fun interactWithBlock(event: PlayerInteractEvent.RightClickBlock) {
+        val world = event.level
+        if (!world.isClientSide) return
 
+        val player = event.entity
+        val hand = event.hand
+        val hitResult = event.hitVec
         val container = world.getBlockState(hitResult.blockPos).block.identifier
         val blockEntity = world.getBlockEntity(hitResult.blockPos)
 
         if (blockEntity != null) {
             Interaction.prepare(container, player, world, hand, hitResult, null, blockEntity)
-            return InteractionResult.PASS
+            return
         }
 
         if (container in ContainerDefaultGuiTextureRegistry) {
             Interaction.prepare(container, player, world, hand, hitResult, null)
         }
-
-        return InteractionResult.PASS
     }
 
-    override fun interact(
-        player: Player,
-        world: Level,
-        hand: InteractionHand,
-        entity: Entity,
-        hitResult: EntityHitResult
-    ): InteractionResult {
-        if (!world.isClientSide) return InteractionResult.PASS
+    private fun interactWithEntity(event: PlayerInteractEvent.EntityInteract) {
+        val world = event.level
+        if (!world.isClientSide) return
 
+        val entity = event.target
+        val hitResult = EntityHitResult(entity, entity.position().add(event.location))
         val container = entity.identifier
-        Interaction.prepare(container, player, world, hand, hitResult, null, entity)
-
-        return InteractionResult.PASS
+        Interaction.prepare(container, event.entity, world, event.hand, hitResult, null, entity)
     }
 
-    override fun interact(player: Player, world: Level, hand: InteractionHand): InteractionResult {
-        if (!world.isClientSide) return InteractionResult.PASS
+    private fun interactWithItem(event: PlayerInteractEvent.RightClickItem) {
+        val world = event.level
+        if (!world.isClientSide) return
 
-        val stack = player.getItemInHand(hand)
+        val player = event.entity
+        val stack = player.getItemInHand(event.hand)
         if (stack.`is`(Items.WRITABLE_BOOK) || stack.`is`(Items.WRITTEN_BOOK)) {
             Interaction.prepare(stack.item.identifier, player, world, InteractionHand.MAIN_HAND, null, BookExtraProperties(0, 0))
             // BookExtraProperties will be updated later
         }
-        return InteractionResult.PASS
     }
 
     override fun onBeforeBegin(screen: Screen) {
@@ -87,16 +78,11 @@ internal object InteractionHandler : ClientModInitializer, UseBlockCallback, Use
         }
     }
 
-    override fun beforeInit(client: Minecraft, screen: Screen, scaledWidth: Int, scaledHeight: Int) {
-        ScreenEvents.beforeExtract(screen).register(this)
-        ScreenEvents.afterExtract(screen).register(this)
-    }
-
-    override fun beforeExtract(screen: Screen, drawContext: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, tickDelta: Float) {
+    private fun beforeExtract(event: ScreenEvent.Render.Pre) {
         TextureReplacer.isReplacingTextures = true
     }
 
-    override fun afterExtract(screen: Screen, drawContext: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, tickDelta: Float) {
+    private fun afterExtract(event: ScreenEvent.Render.Post) {
         TextureReplacer.isReplacingTextures = false
     }
 

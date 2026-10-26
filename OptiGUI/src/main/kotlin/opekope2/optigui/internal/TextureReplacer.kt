@@ -1,15 +1,11 @@
 package opekope2.optigui.internal
 
-import net.fabricmc.api.ClientModInitializer
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
-import net.fabricmc.fabric.api.networking.v1.PacketSender
-import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
-import net.minecraft.client.multiplayer.ClientPacketListener
-import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.resources.Identifier
 import net.minecraft.world.InteractionHand
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent
+import net.neoforged.neoforge.common.NeoForge
+import net.neoforged.neoforge.event.tick.LevelTickEvent
 import opekope2.optigui.interaction.IBeforeInteractionBeginCallback
 import opekope2.optigui.interaction.Interaction
 import opekope2.optigui.internal.filter.ContainerMapFilter
@@ -17,9 +13,8 @@ import opekope2.optigui.registry.ContainerDefaultGuiTextureRegistry
 import opekope2.optigui.registry.RetexturableScreenRegistry
 import opekope2.optigui.util.identifier
 
-internal object TextureReplacer : ClientModInitializer {
-    private object InteractionHolder : ClientTickEvents.EndLevelTick, ClientPlayConnectionEvents.Join,
-        ClientPlayConnectionEvents.Disconnect {
+internal object TextureReplacer {
+    private object InteractionHolder {
         val replacementCache = mutableMapOf<Identifier, Identifier>()
 
         var interacting: Boolean = false
@@ -41,7 +36,7 @@ internal object TextureReplacer : ClientModInitializer {
         }
 
         fun begin(screen: Screen) {
-            IBeforeInteractionBeginCallback.EVENT.invoker().onBeforeBegin(screen)
+            IBeforeInteractionBeginCallback.fire(screen)
 
             this.screen = screen
 
@@ -67,17 +62,17 @@ internal object TextureReplacer : ClientModInitializer {
             )
         }
 
-        override fun onEndTick(world: ClientLevel) {
-            if (interacting) {
+        fun onEndTick(event: LevelTickEvent.Post) {
+            if (event.level.isClientSide && interacting) {
                 replacementCache.clear()
             }
         }
 
-        override fun onPlayReady(handler: ClientPacketListener, sender: PacketSender, client: Minecraft) {
-            data = Interaction.Data(client.player!!, handler.level, InteractionHand.MAIN_HAND, null, null, null, null)
+        fun onPlayReady(event: ClientPlayerNetworkEvent.LoggingIn) {
+            data = Interaction.Data(event.player, event.player.level(), InteractionHand.MAIN_HAND, null, null, null, null)
         }
 
-        override fun onPlayDisconnect(handler: ClientPacketListener, client: Minecraft) {
+        fun onPlayDisconnect(event: ClientPlayerNetworkEvent.LoggingOut) {
             // Clean up, don't leak memory. Just to be safe.
             end()
             data = null
@@ -99,10 +94,10 @@ internal object TextureReplacer : ClientModInitializer {
     var isReplacingTextures = false
         get() = field && InteractionHolder.interacting
 
-    override fun onInitializeClient() {
-        ClientTickEvents.END_LEVEL_TICK.register(InteractionHolder)
-        ClientPlayConnectionEvents.JOIN.register(InteractionHolder)
-        ClientPlayConnectionEvents.DISCONNECT.register(InteractionHolder)
+    fun initialize() {
+        NeoForge.EVENT_BUS.addListener(LevelTickEvent.Post::class.java, InteractionHolder::onEndTick)
+        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn::class.java, InteractionHolder::onPlayReady)
+        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut::class.java, InteractionHolder::onPlayDisconnect)
     }
 
     @JvmStatic
