@@ -71,7 +71,7 @@ Yes.
 
 ### OptiFine GUI animations?
 
-Only with [Animatica](https://github.com/FoundationGames/Animatica).
+Only with [Animatica](https://github.com/FoundationGames/Animatica) or [Animatica Refabricated](https://github.com/coredex-source/AnimaticaRefabricated).
 
 ### OptiFine colors (colors.properties)?
 
